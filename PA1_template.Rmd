@@ -7,6 +7,29 @@ output:
 
 
 ## Loading and preprocessing the data
+---
+title: "PA1_template.Rmd"
+author: "Amir Pournasserian"
+date: "Sunday, September 07, 2014"
+output: html_document
+---
+
+```{r}
+raw_data <- read.csv("activity.csv")
+raw_data$date <- as.Date(as.character(raw_data$date))
+```
+
+#data <- raw_data[!is.na(raw_data$steps), ]
+#no need to remove
+
+```{r, echo=FALSE}
+data <- aggregate(steps ~ date, raw_data, sum )
+hist(data$steps)
+```
+
+mean is `r mean(data$steps)`
+
+median is `r median(data$steps)`
 
 
 
