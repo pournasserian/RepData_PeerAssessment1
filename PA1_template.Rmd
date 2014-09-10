@@ -1,48 +1,99 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
-
-
-## Loading and preprocessing the data
----
-title: "PA1_template.Rmd"
+output: html_document
 author: "Amir Pournasserian"
 date: "Sunday, September 07, 2014"
-output: html_document
+keep_md: true
 ---
-
+## Loading and preprocessing the data
+First of all, I should read raw dataset from the source file. As we know, the type of *date* column will be charachter, so I change the type to *Date*. By default, the other column's type are *int*.
 ```{r}
 raw_data <- read.csv("activity.csv")
 raw_data$date <- as.Date(as.character(raw_data$date))
 ```
 
-#data <- raw_data[!is.na(raw_data$steps), ]
-#no need to remove
-
-```{r, echo=FALSE}
-data <- aggregate(steps ~ date, raw_data, sum )
-hist(data$steps)
+## What is mean total number of steps taken per day?
+```{r}
+# tspd includes total (sum) number of steps taken per day 
+tspd <- aggregate(steps ~ date, raw_data, sum)
+hist(tspd$steps, xlab = "Steps", 
+     main = "Total Number of Steps per Day")
 ```
 
-mean is `r mean(data$steps)`
+####Mean  
+The ***mean*** total number of steps taken per day is ***`r format(round(mean(tspd$steps), 0))`***.  
 
-median is `r median(data$steps)`
-
-
-
-## What is mean total number of steps taken per day?
-
-
+####Median
+The ***median*** total number of steps taken per day is ***`r format(round(median(tspd$steps), 0))`***.
 
 ## What is the average daily activity pattern?
+```{r}
+# mspi includes the mean steps per interval
+mspi <- aggregate(steps ~ interval, raw_data, mean)
+plot(mspi, type = "l", xlab = "Intervals", 
+     ylab = "Steps (Average)", 
+     main = "Average Number of Steps (across all days)")
+```
 
-
+The 5-minute interval which the ***maximum*** number of steps on average across all the days is 
+***`r mspi[mspi$steps == max(mspi$steps),1]`***.
 
 ## Imputing missing values
 
+####Missing values
+The total number of ***missing values*** in dataset is 
+***`r length(raw_data[is.na(raw_data$steps),1])`***.
+
+####Devising for missing value replacement
+I replace the missing values with the mean for that 5-minute interval. 
+Here are the steps which I applied for this purpose:
+
+1. Join the raw dataset with the mean dataset. 
+2. Find the index of rows which contain missing values.
+3. Replace the missing column with mean data in the same index.
+
+```{r}
+devised_data <- merge(x = raw_data, y = mspi, by = "interval")
+colnames(devised_data) <- c("interval", "steps", "date", "stepsMean")
+ind <- which(is.na(devised_data$steps), arr.ind = TRUE)
+devised_data[ind, 2] <- devised_data[ind, 4]
+```
+
+The new dataset that is equal to the original dataset but with the missing data filled in is called *devised_data*.
+
+```{r}
+dev_tspd <- aggregate(steps ~ date, devised_data, sum)
+hist(dev_tspd$steps, xlab = "Steps", 
+     main = "Total Number of Steps per Day")
+```
+  
+####Devised Mean  
+The ***mean*** total number of steps taken per day is ***`r format(round(mean(dev_tspd$steps), 0))`***.  
+
+####Devised Median
+The ***median*** total number of steps taken per day is ***`r format(round(median(dev_tspd$steps), 0))`***.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+devised_data$is_weekend <- (weekdays(devised_data$date) %in% c("Saturday", "Sunday"))
+devised_data$datetype <- "weekday"
+devised_data$datetype[devised_data$is_weekend == TRUE] <- "weekend"
+devised_data$datetype <- as.factor(devised_data$datetype)
+view_data <- aggregate(steps ~ interval, devised_data, mean)
+```
+
+```{r}
+library(lattice)
+steps <- devised_data$steps
+interval <- devised_data$interval
+datetype <- devised_data$datetype
+xyplot(steps ~ interval|datetype, 
+       data = view_data, 
+       type = "l",
+       main="", 
+       ylab = "Number of steps",
+       xlab="Interval",
+       layout = c(1,2))
+```
+
